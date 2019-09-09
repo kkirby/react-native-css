@@ -1,30 +1,29 @@
 {
-  "name": "react-native-css",
-  "version": "0.0.1",
-  "private": true,
+  "name": "@gmrmarketing/react-native-css",
+  "version": "1.0.1",
+  "description": "CSS in react-native!",
+  "main": "lib/index.js",
   "scripts": {
-    "start": "react-native start",
-    "test": "jest",
-    "lint": "eslint ."
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "tsc"
   },
+  "author": "Digital",
+  "license": "UNLICENSED",
   "dependencies": {
-    "babel-cli": "^6.26.0",
-    "css-select": "^2.0.2",
-    "react": "16.8.6",
-    "react-native": "0.60.5",
-    "uuid": "^3.3.3"
+    "boolbase": "^1.0.0",
+    "css-what": "^2.1.2",
+    "domutils": "^1.7.0",
+    "nth-check": "^1.0.2",
+    "react": "^16.9.0",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
-    "@babel/core": "7.5.5",
-    "@babel/runtime": "7.5.5",
-    "@react-native-community/eslint-config": "0.0.3",
-    "babel-jest": "24.9.0",
-    "eslint": "6.2.1",
-    "jest": "24.9.0",
-    "metro-react-native-babel-preset": "0.54.1",
-    "react-test-renderer": "16.8.6"
-  },
-  "jest": {
-    "preset": "react-native"
+    "@types/node": "^12.7.4",
+    "@types/react": "^16.9.2",
+    "@types/react-dom": "^16.9.0",
+    "typescript": "^3.6.2"
   }
 }
