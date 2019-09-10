@@ -117,19 +117,23 @@ interface ApplyStyleAndAugmentChildrenArgs {
 
 function applyStyleAndAugmentChildren({element,styleContext,inheritChildStyleContext,nextStylePath}: ApplyStyleAndAugmentChildrenArgs): React.ReactElement {
 	let childrenMutable = element.props.children;
-	if(!Array.isArray(childrenMutable)){
-		childrenMutable = mutateChild({
-			child: childrenMutable,
-			styleContext,
-			inheritChildStyleContext,
-			nextStylePath
-		});
-	}
-	else {
-		childrenMutable = React.Children.map(
-			childrenMutable,
-			child => mutateChild({child,styleContext,inheritChildStyleContext,nextStylePath})
-		);
+	
+	// @ts-ignore
+	if(childrenMutable != null && !element.type._isStyleized){
+		if(!Array.isArray(childrenMutable)){
+			childrenMutable = mutateChild({
+				child: childrenMutable,
+				styleContext,
+				inheritChildStyleContext,
+				nextStylePath
+			});
+		}
+		else {
+			childrenMutable = React.Children.map(
+				childrenMutable,
+				child => mutateChild({child,styleContext,inheritChildStyleContext,nextStylePath})
+			);
+		}
 	}
 	
 	return React.cloneElement(
