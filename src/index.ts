@@ -1,4 +1,6 @@
 import React, { ReactElement } from "react";
+import {StyleSheet} from "react-native";
+
 import cssAdapter from './adapter';
 const CSSselect = require('../css-select');
 
@@ -13,8 +15,6 @@ import {
 	StyleProps,
 	StyledComponent
 } from './types';
-
-
 
 import {
 	getComponentTag,
@@ -314,15 +314,26 @@ export function styleComponent(component: Component): StyledComponent {
  */
 
 export function updateStyles(styles: {[key: string]: {[key: string]: any}}){
+	let stylesheet: {
+		[key:string]: object
+	} = {};
+	let rnStylesheet: StyleSheet.NamedStyles<any> | null = null;
+	let index = 0;
 	styleFunctions = Object.entries(styles).map(
 		([selector,style]) => {
+			let key = 'style_' + index;
+			index += 1;
+			stylesheet[key] = style;
 			let query = CSSselect.compile(selector,{adapter: cssAdapter});
 			return (...args) => {
 				if(query(...args)){
-					return style;
+					if(rnStylesheet == null)return false;
+					return rnStylesheet[key];
 				}
 				return false;
 			}
 		}
 	);
+	rnStylesheet = StyleSheet.create(stylesheet);
 }
+
