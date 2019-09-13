@@ -1,15 +1,15 @@
 {
   "name": "@gmrmarketing/react-native-css",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CSS in react-native!",
   "main": "lib/index.js",
   "scripts": {
-    "type-check": "ttsc --noEmit",
+    "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
     "build": "npm run build:js",
     "watch": "npm run build:js -- --watch",
-    "build:types": "ttsc --emitDeclarationOnly",
-    "build:js": "ttsc"
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "tsc"
   },
   "author": "Digital",
   "license": "UNLICENSED",
@@ -31,7 +31,6 @@
     "@types/react-dom": "^16.9.0",
     "@types/react-native": "^0.60.14",
     "@types/sass": "^1.16.0",
-    "ttypescript": "^1.5.7",
-    "typescript": "^3.6.2",
+    "typescript": "^3.6.2"
   }
 }
