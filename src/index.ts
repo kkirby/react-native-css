@@ -345,14 +345,6 @@ export function WrappedComponent(props: any){
 		inheritChildStyleContext
 	} = getContextVariables({component,props});
 	
-	let nextProps = {
-		...props,
-		[StyleInfoKey]: {
-			stylePath: nextStylePath,
-			inheritChildStyleContext
-		}
-	};
-	
 	let element = React.cloneElement(
 		React.Children.only(
 			props.children
