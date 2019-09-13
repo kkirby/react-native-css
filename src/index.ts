@@ -337,3 +337,37 @@ export function updateStyles(styles: {[key: string]: {[key: string]: any}}){
 	rnStylesheet = StyleSheet.create(stylesheet);
 }
 
+export function WrappedComponent(props: any){
+	let component = 'WrappedComponent';
+	let {
+		styleContext,
+		nextStylePath,
+		inheritChildStyleContext
+	} = getContextVariables({component,props});
+	
+	let nextProps = {
+		...props,
+		[StyleInfoKey]: {
+			stylePath: nextStylePath,
+			inheritChildStyleContext
+		}
+	};
+	
+	let element = React.cloneElement(
+		React.Children.only(
+			props.children
+		),
+		{},
+		props.content
+	);
+	
+	return applyStyleAndAugmentChildren({
+		element,
+		styleContext,
+		inheritChildStyleContext,
+		nextStylePath
+	});
+}
+
+WrappedComponent._isStyleized = true;
+
