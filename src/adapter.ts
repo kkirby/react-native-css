@@ -39,7 +39,7 @@ export default {
 	},
 	getSiblings(stylePath: any){
 		if(stylePath.length > 0){
-			return stylePath[stylePath.length - 1].siblings;
+			return stylePath[stylePath.length - 2].children;
 		}
 		else {
 			return false;

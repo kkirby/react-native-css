@@ -26,7 +26,6 @@ export type StylePath = StyleContext[];
 export interface InheritStyleContext {}
 
 export interface InheritChildStyleContext {
-	siblings: StyleContext[];
 	parent: StyleContext;
 }
 

@@ -84,9 +84,7 @@ function mutateChild({child,styleContext,inheritChildStyleContext,nextStylePath}
 		 **/
 		// @ts-ignore
 		let childStyleContext: StyleContext = {};
-		inheritChildStyleContext.siblings.push(childStyleContext);
 		// Add this child to the style context
-		styleContext.children.push(childStyleContext);
 		// Clone the child, giving it all the info it needs to succeed.
 		return React.cloneElement(
 			child,
@@ -135,7 +133,11 @@ function applyStyleAndAugmentChildren({element,styleContext,inheritChildStyleCon
 			);
 		}
 	}
-	
+
+	if(nextStylePath.length > 1){
+		nextStylePath[nextStylePath.length - 2].children.push(styleContext);
+	}
+
 	return React.cloneElement(
 		element,
 		{
@@ -203,10 +205,9 @@ function getContextVariables({component,props}: GetContextVariablesArgProps): Ge
 
 	/**
 	 * Each child must inherit some basic info that is shared among children. Specifically the
-	 * parent and their siblings. Everything else the child will derive themselves.
+	 * parent. Everything else the child will derive themselves.
 	 **/
 	let inheritChildStyleContext: InheritChildStyleContext = {
-		siblings: [],
 		parent: styleContext
 	};
 	
