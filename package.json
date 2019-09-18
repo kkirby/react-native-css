@@ -1,6 +1,6 @@
 {
   "name": "@gmrmarketing/react-native-css",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "CSS in react-native!",
   "main": "lib/index.js",
   "scripts": {
