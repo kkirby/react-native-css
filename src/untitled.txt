@@ -1,0 +1,18 @@
+┌App
+└┬<StyleStart> (Iterates children, provide __StyleInfo__ to props)
+ └─<Content/>
+  ┌Content (Consumes __StyleInfo__, iterates children, provide __StyleInfo__ to props)
+  ├┬─<View>
+  ││┌View (Consumes __StyleInfo__, iterates children, provide __StyleInfo__ to props)
+  ││└┬─<Icon>
+  ││ └─<Button>
+  │├─<Icon>
+  │├─<Button>
+
+• Which components need to iterate children
+  • View
+• Which components need to consume __StyleInfo__ to provide styling
+┌─┬┐ 
+│ ││ 
+├─┼┤ 
+└─┴┘
