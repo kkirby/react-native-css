@@ -1,6 +1,9 @@
-import React, {useEffect,useState,useMemo,useRef} from 'react';
-import cssAdapter from './adapter';
-import CSSselect from './css-select';
+const React = require('react');
+const {useState,useRef,useEffect} = React;
+
+const cssAdapter = require('./adapter');
+const CSSselect = require('css-select');
+const parseScss = require('./parser');
 
 const styleFunctions = [];
 
@@ -27,31 +30,63 @@ function isFunctionalComponent(component){
 	}
 }
 
-function getStyleForStyleInfo(styleInfo){
-	let declarations = {};
-	for(let styleFunction of styleFunctions){
-		styleFunction(styleInfo,declarations);
-	}
-	
-	return declarations;
-}
-
 function pushRuleSets(ruleSets){
 	styleFunctions.push(
 		...Object.entries(ruleSets).map(
 			([selector,declarations]) => {
-				let query = CSSselect.compile(selector,{adapter: cssAdapter});
-				return (styleInfo,destDeclarations) => {
-					if(query(styleInfo)){
-						Object.assign(
-							destDeclarations,
-							declarations
-						);
+				const styleAndProps = {
+					style: {},
+					props: {}
+				};
+				Object.entries(declarations).forEach(([key,value]) => {
+					// If the key starts with -- it's a prop.
+					if(key.substr(0,2) === '--'){
+						styleAndProps.props[key.slice(2)] = value;
 					}
+					else {
+						styleAndProps.style[key] = value;
+					}
+				});
+				const query = CSSselect.compile(selector,{adapter: cssAdapter});
+				return (styleInfo) => {
+					if(query(styleInfo)){
+						return styleAndProps;
+					}
+					return {
+						style: {},
+						props: {}
+					};
 				}
 			}
 		)
 	);
+}
+
+function importScss(scss){
+	pushRuleSets(
+		parseScss(scss)
+	);
+}
+
+function getStyleAndPropsForStyleInfo(styleInfo){
+	const result = {
+		style: {},
+		props: {}
+	};
+	
+	for(let styleFunction of styleFunctions){
+		let styleAndProps = styleFunction(styleInfo);
+		Object.assign(
+			result.style,
+			styleAndProps.style
+		);
+		Object.assign(
+			result.props,
+			styleAndProps.props
+		);;
+	}
+	
+	return result;
 }
 
 function useStyle(name,selector,parent){
@@ -67,50 +102,60 @@ function useStyle(name,selector,parent){
 		parent.children.push(styleInfo);
 	}
 	
-	const [style,setStyle] = useState({});
+	const [styleAndProps,setStyleAndProps] = useState({
+		style: {},
+		props: {}
+	});
 	
 	useEffect(() => {
-		setStyle(
-			getStyleForStyleInfo(styleInfo)
+		setStyleAndProps(
+			getStyleAndPropsForStyleInfo(styleInfo)
 		);
 	},[styleInfo]);
 	
-	return {styleInfo,style};
+	return {
+		styleInfo,
+		styleAndProps
+	};
 };
 
 function decorateElementForStyles(component,processChildren = false,elementInheritsStyle = false){
 	let name = getComponentTag(component);
 	if(isFunctionalComponent(component)){
 		let Result = (props) => {
-			let {parentStyleInfo,...rest} = props;
-			let {style,styleInfo} = useStyle(
+			let {parentStyleInfo,...restProps} = props;
+			let {
+				styleInfo,
+				styleAndProps
+			} = useStyle(
 				name,
 				{
-					id: rest.id,
-					className: rest.className
+					id: restProps.id,
+					className: restProps.className
 				},
 				parentStyleInfo
 			);
 			
-			style = {
-				...style,
-				...(rest.style || {})
-			};
+			let style = {
+				...styleAndProps.style,
+				...restProps.style
+			}
 			
 			let element = component({
-				...rest,
-				style,
-				styleInfo
+				...styleAndProps.props,
+				...restProps,
+				style
 			});
 			
 			let nextProps = {
 				parentStyleInfo: styleInfo,
 				...(
 					elementInheritsStyle ? {
+						...styleAndProps.props,
 						style
 					} : {}
 				)
-			}
+			};
 			
 			if(processChildren){
 				let children = React.Children.map(element.props.children,child => {
@@ -142,5 +187,11 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 module.exports = {
 	decorateElementForStyles,
 	useStyle,
-	pushRuleSets
+	pushRuleSets,
+	importScss,
+	// backwards compatability
+	updateStyles: pushRuleSets,
+	styleComponent(component,processChildren = false){
+		return decorateElementForStyles(component,processChildren,true);
+	}
 };

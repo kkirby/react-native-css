@@ -1,8 +1,11 @@
 const csstree = require('css-tree');
-const sass = require('sass');
+const sass = require('./sass');
 
 function formatValue(value){
-	if(value.type == 'Dimension'){
+	if(value.type == 'Raw'){
+		return value.value;
+	}
+	else if(value.type == 'Dimension' || value.type == 'Number'){
 		return parseFloat(value.value);
 	}
 	else if(value.type == 'Percentage'){
@@ -28,7 +31,6 @@ function formatProperty(property){
 	);
 }
 
-
 function formatSelector(selector){
 	return csstree.generate(selector)
 }
@@ -39,13 +41,18 @@ function formatSelectorList(selectorList){
 
 function formatDeclaration(declaration){
 	let property = formatProperty(declaration.property);
-	let value = declaration.value.children;
-	if(value.length > 1){
-		throw new Error('Only 1 property value allowed.');
+	let value = declaration.value;
+
+	if(value.type !== 'Raw' && value.children){
+		value = value.children;
+		if(value.length > 1){
+			throw new Error('Only 1 property value allowed.');
+		}
+		value = value[0];
 	}
 	
 	return {
-		[property]: formatValue(value[0])
+		[property]: formatValue(value)
 	};
 }
 
@@ -86,10 +93,12 @@ function formatStyleSheet(stylesheet){
 	return result;
 }
 
-function parseStyles(styles){
+function parseScss(styles){
 
-	let result = sass.renderSync({data: styles});
-
+	let result = sass.renderSync({data: styles,importer(){
+		return '';
+	}});
+	
     let ast = csstree.toPlainObject(
         csstree.parse(result.css.toString(),{
             parseCustomProperty: true
@@ -99,6 +108,4 @@ function parseStyles(styles){
 	return formatStyleSheet(ast);
 }
 
-module.exports = {
-	parseStyles
-};
+module.exports = parseScss;

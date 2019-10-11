@@ -1,36 +1,23 @@
 {
   "name": "@gmrmarketing/react-native-css",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "CSS in react-native!",
-  "main": "lib/index.js",
+  "main": "src/index.js",
   "scripts": {
-    "type-check": "tsc --noEmit",
-    "type-check:watch": "npm run type-check -- --watch",
-    "build": "npm run build:js",
-    "watch": "npm run build:js -- --watch",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "tsc"
+    "install": "node ./post-install/process-sass.js",
+    "compile": "browserify ./src/index.js -s reactNativeCss --exclude chokidar --exclude react -o ./index.js"
   },
   "author": "Digital",
   "license": "UNLICENSED",
   "dependencies": {
-    "boolbase": "^1.0.0",
+    "browserify": "^16.5.0",
+    "buffer": "^5.4.3",
+    "css-select": "^2.0.2",
     "css-tree": "^1.0.0-alpha.34",
-    "css-what": "^2.1.2",
-    "domutils": "^1.7.0",
-    "nth-check": "^1.0.2",
-    "react": "^16.9.0",
-    "react-native": "^0.60.5",
+    "escape-string-regexp": "^2.0.0",
+    "react": "*",
+    "react-native": "*",
     "sass": "^1.22.12",
-    "tslib": "^1.10.0"
-  },
-  "devDependencies": {
-    "@types/css-tree": "^1.0.1",
-    "@types/node": "^12.7.4",
-    "@types/react": "^16.9.2",
-    "@types/react-dom": "^16.9.0",
-    "@types/react-native": "^0.60.14",
-    "@types/sass": "^1.16.0",
-    "typescript": "^3.6.2"
+    "through": "^2.3.8"
   }
 }

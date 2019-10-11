@@ -1,0 +1,50 @@
+var self = ((parent) => {
+	let self = {};
+	if(Proxy){
+		return new Proxy(parent,{
+			set(obj, prop, value){
+				if(obj[prop] != null){
+					obj[prop] = value;
+				}
+				else {
+					self[prop] = value;
+				}
+			},
+			get(obj, prop){
+				if(obj[prop] != null){
+					return obj[prop];
+				}
+				else {
+					return self[prop];
+				}
+			}
+		});
+	}
+	else {
+		let props = [];
+		for(let prop in parent){
+			props.push(prop);
+			Object.defineProperty(self,prop,{
+				get(){
+					return parent[prop];
+				},
+				set(value){
+					parent[prop] = value;
+				}
+			});
+		}
+		Object.getOwnPropertyNames(parent).forEach(prop => {
+			if(props.indexOf(prop) === -1){
+				Object.defineProperty(self,prop,{
+					get(){
+						return parent[prop];
+					},
+					set(value){
+						parent[prop] = value;
+					}
+				});
+			}
+		});
+		return self;
+	}
+})(dartNodePreambleSelf);
