@@ -144,6 +144,7 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 			let element = component({
 				...styleAndProps.props,
 				...restProps,
+				__StyleInfo__: styleInfo,
 				style
 			});
 			
