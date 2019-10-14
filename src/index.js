@@ -22,7 +22,7 @@ function getComponentTag(component){
 }
 
 function isFunctionalComponent(component){
-	if(typeof component === 'function' && component instanceof Function){
+	if(typeof component === 'function' && component instanceof Function && Object.getPrototypeOf(component) === Function.prototype){
 		return true;
 	}
 	else {
