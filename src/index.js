@@ -1,5 +1,5 @@
 const React = require('react');
-const {useState,useRef,useEffect} = React;
+const {useState,useRef,useLayoutEffect} = React;
 
 const cssAdapter = require('./adapter');
 const CSSselect = require('css-select');
@@ -107,7 +107,7 @@ function useStyle(name,selector,parent){
 		props: {}
 	});
 	
-	useEffect(() => {
+	useLayoutEffect(() => {
 		setStyleAndProps(
 			getStyleAndPropsForStyleInfo(styleInfo)
 		);
