@@ -180,7 +180,14 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 		return Result;
 	}
 	else {
-		throw new Error('decorateElementForStyles does not support non-functional components.');
+		const ComponentWrapper =  (props) => {
+			return React.createElement(
+				component,
+				props
+			);
+		};
+		ComponentWrapper.displayName = name;
+		return decorateElementForStyles(ComponentWrapper,processChildren,elementInheritsStyle);
 	}
 }
 
