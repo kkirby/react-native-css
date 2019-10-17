@@ -90,14 +90,20 @@ function getStyleAndPropsForStyleInfo(styleInfo){
 }
 
 function useStyle(name,selector,parent){
-	const styleInfoRef = useRef({
+	const refValue = {
 		name,
 		selector,
 		parent,
 		children: [],
 		renderedStyle: null
-	});
-	const styleInfo = styleInfoRef.current;
+	};
+	const styleInfoRef = useRef(refValue);
+	let styleInfo = styleInfoRef.current;
+
+	if(styleInfo.selector.id != selector.id || styleInfo.selector.className != selector.className || parent != styleInfo.parent){
+		styleInfo = styleInfoRef.current = refValue;
+	}
+	
 	if(parent != null && parent.children.indexOf(styleInfo) === -1){
 		parent.children.push(styleInfo);
 	}
