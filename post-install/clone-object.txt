@@ -1,3 +1,5 @@
+var navigator = undefined;
+
 var self = ((parent) => {
 	let self = {};
 	if(Proxy){
