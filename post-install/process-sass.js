@@ -4,13 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const escapeStringRegexp = require('escape-string-regexp');
 
-function replaceString(find,source,replacement){
-	find = escapeStringRegexp(find);
-	find = find.replace(/__WC__/g,'.+');
-	let regex = new RegExp(find,'m');
-	return source.replace(regex,replacement);
-}
-
 const b = browserify(
 	path.join(__dirname,'..','src','sassWrapper.js'),
 	{
@@ -29,9 +22,6 @@ b.transform(function(file){
 		buf => data += buf,
 		function(){
 			if(file === sassPath){
-				replaceString(data,'var self = Object.create(dartNodePreambleSelf);')
-				var dartNodePreambleSelf = typeof global !== "undefined" ? global : window;
-			
 				data = data.replace(
 					'var self = Object.create(dartNodePreambleSelf);',
 					fs.readFileSync(path.join(__dirname,'clone-object.txt'))
