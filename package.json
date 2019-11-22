@@ -15,9 +15,11 @@
     "css-select": "^2.0.2",
     "css-tree": "^1.0.0-alpha.34",
     "escape-string-regexp": "^2.0.0",
-    "react": "*",
-    "react-native": "*",
     "sass": "^1.22.12",
     "through": "^2.3.8"
+  },
+  "peerDependencies": {
+      "react": "*",
+      "react-native": "*"
   }
 }
