@@ -1,11 +1,28 @@
 const React = require('react');
-const {useState,useRef,useLayoutEffect} = React;
+const {useState,useRef,useLayoutEffect,useMemo,forwardRef} = React;
+const ReactIs = require('react-is');
 
 const cssAdapter = require('./adapter');
 const CSSselect = require('css-select');
 const parseScss = require('./parser');
 
 const styleFunctions = [];
+
+// based on https://github.com/mridgway/hoist-non-react-statics/blob/master/src/index.js
+const hoistBlackList = {
+    $$typeof: true,
+    render: true,
+    compare: true,
+    type: true
+}
+
+function copyStaticProperties(base,target){
+	Object.keys(base).forEach(key => {
+		if(base.hasOwnProperty(key) && !hoistBlackList[key]){
+			Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(base, key));
+		}
+	});
+}
 
 function getComponentTag(component){
 	if(component){
@@ -73,7 +90,7 @@ function getStyleAndPropsForStyleInfo(styleInfo){
 		style: {},
 		props: {}
 	};
-	
+
 	for(let styleFunction of styleFunctions){
 		let styleAndProps = styleFunction(styleInfo);
 		Object.assign(
@@ -85,7 +102,7 @@ function getStyleAndPropsForStyleInfo(styleInfo){
 			styleAndProps.props
 		);;
 	}
-	
+
 	return result;
 }
 
@@ -97,28 +114,29 @@ function useStyle(name,selector,parent){
 		children: [],
 		renderedStyle: null
 	};
-	const styleInfoRef = useRef(refValue);
-	let styleInfo = styleInfoRef.current;
+	const styleInfo = useMemo(() => ({
+		name,
+		selector,
+		parent,
+		children: [],
+		renderedStyle: null
+	}),[name,selector.id,selector.className,parent]);
 
-	if(styleInfo.selector.id != selector.id || styleInfo.selector.className != selector.className || parent != styleInfo.parent){
-		styleInfo = styleInfoRef.current = refValue;
-	}
-	
 	if(parent != null && parent.children.indexOf(styleInfo) === -1){
 		parent.children.push(styleInfo);
 	}
-	
+
 	const [styleAndProps,setStyleAndProps] = useState({
 		style: {},
 		props: {}
 	});
-	
+
 	useLayoutEffect(() => {
 		setStyleAndProps(
 			getStyleAndPropsForStyleInfo(styleInfo)
 		);
 	},[styleInfo]);
-	
+
 	return {
 		styleInfo,
 		styleAndProps
@@ -128,7 +146,7 @@ function useStyle(name,selector,parent){
 function decorateElementForStyles(component,processChildren = false,elementInheritsStyle = false){
 	let name = getComponentTag(component);
 	if(isFunctionalComponent(component)){
-		let Result = (props) => {
+		let Result = (props,ref) => {
 			let {parentStyleInfo,...restProps} = props;
 			let {
 				styleInfo,
@@ -141,19 +159,19 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 				},
 				parentStyleInfo
 			);
-			
+
 			let style = {
 				...styleAndProps.style,
 				...restProps.style
 			}
-			
+
 			let element = component({
 				...styleAndProps.props,
 				...restProps,
 				__StyleInfo__: styleInfo,
 				style
-			});
-			
+			},ref);
+
 			let nextProps = {
 				parentStyleInfo: styleInfo,
 				...(
@@ -163,7 +181,7 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 					} : {}
 				)
 			};
-			
+
 			if(processChildren){
 				let children = React.Children.map(element.props.children,child => {
 					if(React.isValidElement(child)){
@@ -175,26 +193,44 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 						return child;
 					}
 				});
-				
+
 				return React.cloneElement(element,nextProps,children);
-				
+
 			}
 			else {
 				return React.cloneElement(element,nextProps);
 			}
-		}
+		};
 		Result.displayName = name + 'Stylized';
 		return Result;
 	}
 	else {
-		const ComponentWrapper =  (props) => {
-			return React.createElement(
-				component,
-				props
-			);
-		};
-		ComponentWrapper.displayName = name;
-		return decorateElementForStyles(ComponentWrapper,processChildren,elementInheritsStyle);
+		if(ReactIs.isForwardRef(React.createElement(component))){
+			// RenderFn is the inner component of the forwardRef.
+			const renderFn = component.render;
+			if(typeof renderFn !== 'function'){
+				throw new Error('forwardRef render property is not a function.');
+			}
+			
+			// Unwrap the forwardRef
+			const wrapperComponent = (props,ref) => renderFn(props,ref);
+			wrapperComponent.displayName = getComponentTag(renderFn);
+			
+			const decoratedComponent = decorateElementForStyles(wrapperComponent,processChildren,elementInheritsStyle);
+			
+			// Rewrap into forwardRef
+			return React.forwardRef(decoratedComponent);;
+		}
+		else {
+			const wrapperComponent = (props) => {
+				return React.createElement(
+					component,
+					props
+				);
+			}
+			wrapperComponent.displayName = name;
+			return decorateElementForStyles(wrapperComponent,processChildren,elementInheritsStyle);
+		}
 	}
 }
 

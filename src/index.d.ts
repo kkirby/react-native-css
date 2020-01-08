@@ -10,13 +10,13 @@ type FunctionComponent<P> = React.FunctionComponent<
 export function styleComponent<P>(
 	component: React.ComponentType<P>,
 	processChildren?: boolean,
-): FunctionComponent<P>;
+): FunctionComponent<Omit<P,'__StyleInfo__'>>;
 
 export function decorateElementForStyles<P>(
-	component: React.ComponentType,
+	component: React.ComponentType<P>,
 	processChildren?: boolean,
 	elementInheritsStyle?: boolean,
-): FunctionComponent<P>;
+): FunctionComponent<Omit<P,'__StyleInfo__'>>;
 
 export interface StyleInfo {
 	name: string;
