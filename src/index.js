@@ -234,11 +234,16 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 	}
 }
 
+function resetStyles(){
+	styleFunctions.splice(0,styleFunctions.length);
+}
+
 module.exports = {
 	decorateElementForStyles,
 	useStyle,
 	pushRuleSets,
 	importScss,
+	resetStyles,
 	// backwards compatability
 	updateStyles: pushRuleSets,
 	styleComponent(component,processChildren = false){
