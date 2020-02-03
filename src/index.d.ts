@@ -48,6 +48,8 @@ export function useStyle(
 	styleAndProps: StyleAndProps;
 };
 
+export function resetStyles(): void;
+
 interface RuleSets {
 	[key: string]: any;
 }
