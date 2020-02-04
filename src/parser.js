@@ -93,11 +93,15 @@ function formatStyleSheet(stylesheet){
 	return result;
 }
 
-function parseScss(styles){
+function parseScss(styles,sassConfig = {}){
+	const mergedSassConfig = {
+		importer(){
+			return '';
+		},
+		...sassConfig
+	};
 
-	let result = sass.renderSync({data: styles,importer(){
-		return '';
-	}});
+	let result = sass.renderSync({...sassConfig,data: styles});
 	
     let ast = csstree.toPlainObject(
         csstree.parse(result.css.toString(),{

@@ -79,9 +79,9 @@ function pushRuleSets(ruleSets){
 	);
 }
 
-function importScss(scss){
+function importScss(scss,sassConfig){
 	pushRuleSets(
-		parseScss(scss)
+		parseScss(scss,sassConfig)
 	);
 }
 

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {Options} from 'sass';
 
 type FunctionComponent<P> = React.FunctionComponent<
 	P & {
@@ -56,6 +57,6 @@ interface RuleSets {
 
 export function pushRuleSets(ruleSets: RuleSets): void;
 
-export function importScss(scss: string): void;
+export function importScss(scss: string, sassConfig: Omit<Options, 'file' | 'data'>): void;
 
 export function updateStyles(ruleSets: RuleSets): void;
