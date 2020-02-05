@@ -1,12 +1,36 @@
 const React = require('react');
-const {useState,useRef,useLayoutEffect,useMemo,forwardRef} = React;
+const {useState,useRef,useLayoutEffect,useMemo,useCallback,useEffect,forwardRef} = React;
 const ReactIs = require('react-is');
 
 const cssAdapter = require('./adapter');
 const CSSselect = require('css-select');
-const parseScss = require('./parser');
+const {parseCss,parseScss,renderScss} = require('./parser');
 
 const styleFunctions = [];
+
+
+const styleListeners = new Set();
+
+let styleUpdateTimeout = null;
+
+function emitStyleUpdate(){
+	styleUpdateTimeout = null;
+	styleListeners.forEach(listener => listener());
+}
+function onStyleUpdate(){
+	if(styleUpdateTimeout != null){
+		clearTimeout(styleUpdateTimeout);
+	}
+	styleUpdateTimeout = setTimeout(emitStyleUpdate,1);
+}
+
+function addStyleListener(listener){
+	styleListeners.add(listener);
+
+	return () => {
+		styleListeners.delete(listener);
+	}
+}
 
 // based on https://github.com/mridgway/hoist-non-react-statics/blob/master/src/index.js
 const hoistBlackList = {
@@ -77,11 +101,18 @@ function pushRuleSets(ruleSets){
 			}
 		)
 	);
+	onStyleUpdate();
 }
 
 function importScss(scss,sassConfig){
 	pushRuleSets(
 		parseScss(scss,sassConfig)
+	);
+}
+
+function importCss(css){
+	pushRuleSets(
+		parseCss(css)
 	);
 }
 
@@ -131,11 +162,16 @@ function useStyle(name,selector,parent){
 		props: {}
 	});
 
-	useLayoutEffect(() => {
+	const onUpdate = useCallback(() => {
 		setStyleAndProps(
 			getStyleAndPropsForStyleInfo(styleInfo)
 		);
 	},[styleInfo]);
+
+	useLayoutEffect(() => {
+		onUpdate();
+		return addStyleListener(onUpdate);
+	},[onUpdate]);
 
 	return {
 		styleInfo,
@@ -163,6 +199,10 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 			let style = {
 				...styleAndProps.style,
 				...restProps.style
+			}
+			
+			if(styleAndProps.props.disableRender){
+				return null;
 			}
 
 			let element = component({
@@ -236,6 +276,7 @@ function decorateElementForStyles(component,processChildren = false,elementInher
 
 function resetStyles(){
 	styleFunctions.splice(0,styleFunctions.length);
+	onStyleUpdate();
 }
 
 module.exports = {
@@ -243,6 +284,8 @@ module.exports = {
 	useStyle,
 	pushRuleSets,
 	importScss,
+	importCss,
+	renderScss,
 	resetStyles,
 	// backwards compatability
 	updateStyles: pushRuleSets,

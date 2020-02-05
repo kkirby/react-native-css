@@ -93,7 +93,7 @@ function formatStyleSheet(stylesheet){
 	return result;
 }
 
-function parseScss(styles,sassConfig = {}){
+function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
 	const mergedSassConfig = {
 		importer(){
 			return '';
@@ -101,10 +101,12 @@ function parseScss(styles,sassConfig = {}){
 		...sassConfig
 	};
 
-	let result = sass.renderSync({...sassConfig,data: styles});
-	
+	return sass({configContext,mockFileSystem}).renderSync({...sassConfig,data: styles}).css.toString();
+}
+
+function parseCss(css){
     let ast = csstree.toPlainObject(
-        csstree.parse(result.css.toString(),{
+        csstree.parse(css,{
             parseCustomProperty: true
         })
 	);
@@ -112,4 +114,13 @@ function parseScss(styles,sassConfig = {}){
 	return formatStyleSheet(ast);
 }
 
-module.exports = parseScss;
+function parseScss(styles,sassConfig){
+	return parseCss(renderScss(styles,sassConfig));
+}
+
+
+module.exports = {
+	parseScss,
+	parseCss,
+	renderScss
+};

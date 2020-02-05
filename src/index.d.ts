@@ -1,4 +1,5 @@
 import * as React from 'react';
+import fs from 'fs';
 import {Options} from 'sass';
 
 type FunctionComponent<P> = React.FunctionComponent<
@@ -51,12 +52,28 @@ export function useStyle(
 
 export function resetStyles(): void;
 
+interface Context {
+	Buffer: Buffer;
+	fs: typeof fs;
+}
+
 interface RuleSets {
 	[key: string]: any;
 }
 
+type SassConfig = Omit<Options, 'data'> & {
+	mockFileSystem?: {
+		[key: string]: string;
+	} | null;
+	configContext?: ((ctx: Context) => void) | null;
+}
+
 export function pushRuleSets(ruleSets: RuleSets): void;
 
-export function importScss(scss: string, sassConfig: Omit<Options, 'file' | 'data'>): void;
+export function renderScss(scss: string, sassConfig: SassConfig): string;
+
+export function importScss(scss: string, sassConfig: SassConfig): void;
+
+export function importCss(css: string): void;
 
 export function updateStyles(ruleSets: RuleSets): void;

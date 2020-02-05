@@ -24,13 +24,13 @@ b.transform(function(file){
 			if(file === sassPath){
 				data = data.replace(
 					'var self = Object.create(dartNodePreambleSelf);',
-					fs.readFileSync(path.join(__dirname,'clone-object.txt'))
+					'var self = dartNodePreambleSelf'
 				);
 				
-				data = data.replace(
+				/*data = data.replace(
 					/self\.Buffer/g,
 					'Buffer'
-				);
+				);*/
 			
 				data = data.replace(
 					new RegExp(
@@ -39,6 +39,13 @@ b.transform(function(file){
 					),
 					'require'
 				);
+				
+				data = [
+					'module.exports = function(global){',
+						data,
+						'return self.exports;',
+					'}'
+				].join('\n');
 			}
 	        this.queue(data);
 	        this.queue(null);
