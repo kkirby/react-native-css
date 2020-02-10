@@ -1,6 +1,45 @@
 const csstree = require('css-tree');
 const sass = require('./sass');
 
+function formatJsInSass(source){
+	let start = 0;
+	while (true) {
+		let startIndex = source.indexOf('js(', start);
+		if (startIndex === -1) {
+			break;
+		}
+		let offset = startIndex + 3;
+		let closures = 1;
+		let didFind = false;
+		while (true) {
+			if (offset > source.length) {
+				throw new Error('Reached end of document before finding a ;');
+			}
+			let c = source[offset];
+			if (c === '(') {
+				closures++;
+			} else if (c === ')') {
+				closures--;
+			} else if (c === ';') {
+				if (closures === 0) {
+					didFind = true;
+					break;
+				}
+			}
+			offset++;
+		}
+		if (didFind) {
+			let section = 'js:' + source.substr(startIndex + 3, offset - 4 - startIndex);
+			section = JSON.stringify(section).replace(/\\/g,'\\\\');
+			source =
+				source.slice(0, startIndex) + section + source.slice(offset);
+			start += startIndex + section.length + 1;
+		}
+	}
+	
+	return source;
+}
+
 function formatValue(value){
 	if(value.type == 'Raw'){
 		return value.value;
@@ -16,6 +55,10 @@ function formatValue(value){
 	}
 	else if(value.type == 'Operator'){
 		throw new Error('Invalid CSS property value type. Operators are not supported.');
+	}
+	else if(value.type == 'String' && value.value.indexOf('"js:') === 0){
+		let jsString = JSON.parse(value.value.replace(/\\\\/g,'\\')).slice(3);
+		return (new Function('','return ' + jsString))();
 	}
 	else {
 		return csstree.generate(value);
@@ -94,6 +137,29 @@ function formatStyleSheet(stylesheet){
 }
 
 function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
+	
+	const oldConfigContext = configContext;
+	
+	configContext = function({fs, Buffer}){
+		if(typeof oldConfigContext == 'function'){
+			oldConfigContext.apply(this,arguments);
+		}
+		const oldReadFile = fs.readFileSync;
+		fs.readFileSync = function(pathToFile,options){
+			let result = oldReadFile.apply(this, [pathToFile, options]);
+			result = formatJsInSass(result.toString());
+
+			const encoding = options && typeof options === 'object' ? options.encoding : options;
+			if (encoding) {
+				return result;
+			} else {
+				return Buffer.from(String(result), 'utf8');
+			}
+		}
+	};
+	
+	styles = formatJsInSass(styles);
+	
 	const mergedSassConfig = {
 		importer(){
 			return '';
