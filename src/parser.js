@@ -33,10 +33,10 @@ function formatJsInSass(source){
 			section = JSON.stringify(section).replace(/\\/g,'\\\\');
 			source =
 				source.slice(0, startIndex) + section + source.slice(offset);
-			start += startIndex + section.length + 1;
+			start = startIndex + section.length + 1;
 		}
 	}
-	
+
 	return source;
 }
 
@@ -47,18 +47,20 @@ function formatValue(value){
 	else if(value.type == 'Dimension' || value.type == 'Number'){
 		return parseFloat(value.value);
 	}
-	else if(value.type == 'Percentage'){
-		return value.value;
-	}
 	else if(value.type == 'Identifier'){
 		return value.name;
 	}
 	else if(value.type == 'Operator'){
 		throw new Error('Invalid CSS property value type. Operators are not supported.');
 	}
-	else if(value.type == 'String' && value.value.indexOf('"js:') === 0){
-		let jsString = JSON.parse(value.value.replace(/\\\\/g,'\\')).slice(3);
-		return (new Function('','return ' + jsString))();
+	else if(value.type == 'String'){
+		if(value.value.indexOf('"js:') === 0){
+			let jsString = JSON.parse(value.value.replace(/\\\\/g,'\\')).slice(3);
+			return (new Function('','return ' + jsString))();
+		}
+		else {
+			return JSON.parse(value.value);
+		}
 	}
 	else {
 		return csstree.generate(value);
@@ -93,7 +95,7 @@ function formatDeclaration(declaration){
 		}
 		value = value[0];
 	}
-	
+
 	return {
 		[property]: formatValue(value)
 	};
@@ -123,7 +125,7 @@ function formatStyleSheet(stylesheet){
     stylesheet.children.forEach(
         (rule) => {
             let {selectors,declarations} = formatRule(rule);
-		
+
             selectors.forEach(selector => {
                 result[selector] = {
                     ...(result[selector] || {}),
@@ -132,14 +134,14 @@ function formatStyleSheet(stylesheet){
             });
         }
 	);
-	
+
 	return result;
 }
 
 function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
-	
+
 	const oldConfigContext = configContext;
-	
+
 	configContext = function({fs, Buffer}){
 		if(typeof oldConfigContext == 'function'){
 			oldConfigContext.apply(this,arguments);
@@ -157,9 +159,9 @@ function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
 			}
 		}
 	};
-	
+
 	styles = formatJsInSass(styles);
-	
+
 	const mergedSassConfig = {
 		importer(){
 			return '';
