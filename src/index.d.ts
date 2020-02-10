@@ -53,7 +53,7 @@ export function useStyle(
 export function resetStyles(): void;
 
 interface Context {
-	Buffer: Buffer;
+	Buffer: typeof Buffer;
 	fs: typeof fs;
 }
 

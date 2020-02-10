@@ -88,6 +88,7 @@ function pushRuleSets(ruleSets){
 						styleAndProps.style[key] = value;
 					}
 				});
+				
 				const query = CSSselect.compile(selector,{adapter: cssAdapter});
 				return (styleInfo) => {
 					if(query(styleInfo)){
