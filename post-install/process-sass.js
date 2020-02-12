@@ -24,7 +24,7 @@ b.transform(function(file){
 			if(file === sassPath){
 				data = data.replace(
 					'var self = Object.create(dartNodePreambleSelf);',
-					'var self = dartNodePreambleSelf'
+					'var self = dartNodePreambleSelf;\nvar navigator = undefined;'
 				);
 				
 				/*data = data.replace(
