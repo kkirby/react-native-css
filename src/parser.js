@@ -32,7 +32,6 @@ function formatJsInSass(source, theme) {
 			let cutSource = source.substr(startIndex + 3, offset - 4 - startIndex);
 			let section = "";
 			if (cutSource.indexOf("theme.") === 0) {
-				console.log(cutSource);
 				const keys = cutSource.split(".");
 				cutSource = theme;
 
