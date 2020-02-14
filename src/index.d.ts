@@ -1,24 +1,25 @@
-import * as React from 'react';
-import fs from 'fs';
-import Sass, {Options} from 'sass';
+import * as React from "react";
+import fs from "fs";
+import Sass, { Options } from "sass";
 
 type FunctionComponent<P> = React.FunctionComponent<
 	P & {
-		id?: Null<string>,
-		className?: Null<string>,
-		parentStyleInfo?: StyleInfo
-	}>;
+		id?: Null<string>;
+		className?: Null<string>;
+		parentStyleInfo?: StyleInfo;
+	}
+>;
 
 export function styleComponent<P>(
 	component: React.ComponentType<P>,
-	processChildren?: boolean,
-): FunctionComponent<Omit<P,'__StyleInfo__'>>;
+	processChildren?: boolean
+): FunctionComponent<Omit<P, "__StyleInfo__">>;
 
 export function decorateElementForStyles<P>(
 	component: React.ComponentType<P>,
 	processChildren?: boolean,
-	elementInheritsStyle?: boolean,
-): FunctionComponent<Omit<P,'__StyleInfo__'>>;
+	elementInheritsStyle?: boolean
+): FunctionComponent<Omit<P, "__StyleInfo__">>;
 
 export interface StyleInfo {
 	name: string;
@@ -44,7 +45,7 @@ interface StyleAndProps {
 export function useStyle(
 	name: string,
 	selector: Selector,
-	parent: StyleInfo,
+	parent: StyleInfo
 ): {
 	styleInfo: StyleInfo;
 	styleAndProps: StyleAndProps;
@@ -61,13 +62,20 @@ interface RuleSets {
 	[key: string]: any;
 }
 
-type SassConfig = Omit<Options, 'data'> & {
+type SassConfig = Omit<Options, "data"> & {
 	mockFileSystem?: {
 		[key: string]: string;
 	} | null;
 	configContext?: ((ctx: Context) => void) | null;
-	getSassConfig?: ((instance: typeof Sass, scss: string, sassConfig: SassConfig) => SassConfig) | null;
-}
+	theme?: {} | null;
+	getSassConfig?:
+		| ((
+				instance: typeof Sass,
+				scss: string,
+				sassConfig: SassConfig
+		  ) => SassConfig)
+		| null;
+};
 
 export function pushRuleSets(ruleSets: RuleSets): void;
 

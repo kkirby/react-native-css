@@ -208,6 +208,5 @@ function parseScss(styles, sassConfig) {
 module.exports = {
 	parseScss,
 	parseCss,
-	renderScss,
-	formatValue
+	renderScss
 };
