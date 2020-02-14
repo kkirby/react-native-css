@@ -1,10 +1,10 @@
-const csstree = require('css-tree');
-const sass = require('./sass');
+const csstree = require("css-tree");
+const sass = require("./sass");
 
-function formatJsInSass(source, theme){
+function formatJsInSass(source, theme) {
 	let start = 0;
 	while (true) {
-		let startIndex = source.indexOf('js(', start);
+		let startIndex = source.indexOf("js(", start);
 		if (startIndex === -1) {
 			break;
 		}
@@ -13,14 +13,14 @@ function formatJsInSass(source, theme){
 		let didFind = false;
 		while (true) {
 			if (offset > source.length) {
-				throw new Error('Reached end of document before finding a ;');
+				throw new Error("Reached end of document before finding a ;");
 			}
 			let c = source[offset];
-			if (c === '(') {
+			if (c === "(") {
 				closures++;
-			} else if (c === ')') {
+			} else if (c === ")") {
 				closures--;
-			} else if (c === ';') {
+			} else if (c === ";") {
 				if (closures === 0) {
 					didFind = true;
 					break;
@@ -29,9 +29,9 @@ function formatJsInSass(source, theme){
 			offset++;
 		}
 		if (didFind) {
-			let cutSource = source.substr(startIndex+3, offset - 4 - startIndex);
-			let section = '';
-			if (cutSource.indexOf('theme.') === 0) {
+			let cutSource = source.substr(startIndex + 3, offset - 4 - startIndex);
+			let section = "";
+			if (cutSource.indexOf("theme.") === 0) {
 				console.log(cutSource);
 				const keys = cutSource.split(".");
 				cutSource = theme;
@@ -40,16 +40,15 @@ function formatJsInSass(source, theme){
 					if (cutSource[keys[i]]) {
 						cutSource = cutSource[keys[i]];
 					} else {
-						throw new Error(`Invalid theme path ${keys.join('.')}`);
+						throw new Error(`Invalid theme path ${keys.join(".")}`);
 					}
 				}
 				section = cutSource;
 			} else {
-				section = 'js:' + cutSource;
+				section = "js:" + cutSource;
 			}
-			section = JSON.stringify(section).replace(/\\/g,'\\\\');
-			source =
-				source.slice(0, startIndex) + section + source.slice(offset);
+			section = JSON.stringify(section).replace(/\\/g, "\\\\");
+			source = source.slice(0, startIndex) + section + source.slice(offset);
 			start = startIndex + section.length + 1;
 		}
 	}
@@ -57,58 +56,51 @@ function formatJsInSass(source, theme){
 	return source;
 }
 
-function formatValue(value){
-	if(value.type == 'Raw'){
+function formatValue(value) {
+	if (value.type == "Raw") {
 		return value.value;
-	}
-	else if(value.type == 'Dimension' || value.type == 'Number'){
+	} else if (value.type == "Dimension" || value.type == "Number") {
 		return parseFloat(value.value);
-	}
-	else if(value.type == 'Identifier'){
+	} else if (value.type == "Identifier") {
 		return value.name;
-	}
-	else if(value.type == 'Operator'){
-		throw new Error('Invalid CSS property value type. Operators are not supported.');
-	}
-	else if(value.type == 'String'){
-		if(value.value.indexOf('"js:') === 0){
-			let jsString = JSON.parse(value.value.replace(/\\\\/g,'\\')).slice(3);
-			return (new Function('','return ' + jsString))();
-		}
-		else {
+	} else if (value.type == "Operator") {
+		throw new Error(
+			"Invalid CSS property value type. Operators are not supported."
+		);
+	} else if (value.type == "String") {
+		if (value.value.indexOf('"js:') === 0) {
+			let jsString = JSON.parse(value.value.replace(/\\\\/g, "\\")).slice(3);
+			return new Function("", "return " + jsString)();
+		} else {
 			return JSON.parse(value.value);
 		}
-	}
-	else {
+	} else {
 		return csstree.generate(value);
 	}
 }
 
-function formatProperty(property){
-	return property.replace(
-		/([a-z])-([a-z])/g,
-		(whole,left,right) => {
-			return left + right.toUpperCase()
-		}
-	);
+function formatProperty(property) {
+	return property.replace(/([a-z])-([a-z])/g, (whole, left, right) => {
+		return left + right.toUpperCase();
+	});
 }
 
-function formatSelector(selector){
-	return csstree.generate(selector)
+function formatSelector(selector) {
+	return csstree.generate(selector);
 }
 
-function formatSelectorList(selectorList){
+function formatSelectorList(selectorList) {
 	return selectorList.children.map(selector => formatSelector(selector));
 }
 
-function formatDeclaration(declaration){
+function formatDeclaration(declaration) {
 	let property = formatProperty(declaration.property);
 	let value = declaration.value;
 
-	if(value.type !== 'Raw' && value.children){
+	if (value.type !== "Raw" && value.children) {
 		value = value.children;
-		if(value.length > 1){
-			throw new Error('Only 1 property value allowed.');
+		if (value.length > 1) {
+			throw new Error("Only 1 property value allowed.");
 		}
 		value = value[0];
 	}
@@ -118,91 +110,101 @@ function formatDeclaration(declaration){
 	};
 }
 
-function formatBlock(block){
-    return block.children.reduce(
-        (current,declaration) => {
-			return {
-				...current,
-				...formatDeclaration(declaration)
+function formatBlock(block) {
+	return block.children.reduce((current, declaration) => {
+		return {
+			...current,
+			...formatDeclaration(declaration)
+		};
+	}, {});
+}
+
+function formatRule(rule) {
+	return {
+		selectors: formatSelectorList(rule.prelude),
+		declarations: formatBlock(rule.block)
+	};
+}
+
+function formatStyleSheet(stylesheet) {
+	let result = {};
+	stylesheet.children.forEach(rule => {
+		let { selectors, declarations } = formatRule(rule);
+
+		selectors.forEach(selector => {
+			result[selector] = {
+				...(result[selector] || {}),
+				...declarations
 			};
-		},
-		{}
-    )
-}
-
-function formatRule(rule){
-    return {
-        selectors: formatSelectorList(rule.prelude),
-        declarations: formatBlock(rule.block)
-    };
-}
-
-function formatStyleSheet(stylesheet){
-    let result = {};
-    stylesheet.children.forEach(
-        (rule) => {
-            let {selectors,declarations} = formatRule(rule);
-
-            selectors.forEach(selector => {
-                result[selector] = {
-                    ...(result[selector] || {}),
-                    ...declarations
-                }
-            });
-        }
-	);
+		});
+	});
 
 	return result;
 }
 
-function renderScss(styles,{configContext,mockFileSystem,theme,...sassConfig} = {}){
-
+function renderScss(
+	styles,
+	{ configContext, mockFileSystem, theme, getSassConfig, ...sassConfig } = {}
+) {
 	const oldConfigContext = configContext;
 
-	configContext = function({fs, Buffer}){
-		if(typeof oldConfigContext == 'function'){
-			oldConfigContext.apply(this,arguments);
+	configContext = function({ fs, Buffer }) {
+		if (typeof oldConfigContext == "function") {
+			oldConfigContext.apply(this, arguments);
 		}
 		const oldReadFile = fs.readFileSync;
-		fs.readFileSync = function(pathToFile,options){
+		fs.readFileSync = function(pathToFile, options) {
 			let result = oldReadFile.apply(this, [pathToFile, options]);
-			result = formatJsInSass(result.toString(),theme);
+			result = formatJsInSass(result.toString(), theme);
 
-			const encoding = options && typeof options === 'object' ? options.encoding : options;
+			const encoding =
+				options && typeof options === "object" ? options.encoding : options;
 			if (encoding) {
 				return result;
 			} else {
-				return Buffer.from(String(result), 'utf8');
+				return Buffer.from(String(result), "utf8");
 			}
-		}
+		};
 	};
 
-	styles = formatJsInSass(styles,theme);
+	styles = formatJsInSass(styles, theme);
 
 	const mergedSassConfig = {
-		importer(){
-			return '';
+		importer() {
+			return "";
 		},
 		...sassConfig
 	};
 
-	return sass({configContext,mockFileSystem}).renderSync({...sassConfig,data: styles}).css.toString();
+	const instance = sass({ configContext, mockFileSystem });
+
+	if (typeof getSassConfig === "function") {
+		sassConfig = {
+			...sassConfig,
+			...getSassConfig(instance, styles, {
+				configContext,
+				mockFileSystem,
+				...sassConfig
+			})
+		};
+	}
+
+	return instance.renderSync({ ...sassConfig, data: styles }).css.toString();
 }
 
-function parseCss(css){
-    let ast = csstree.toPlainObject(
-        csstree.parse(css,{
-            parseCustomProperty: true
-        })
+function parseCss(css) {
+	let ast = csstree.toPlainObject(
+		csstree.parse(css, {
+			parseCustomProperty: true
+		})
 	);
-	
+
 	return formatStyleSheet(ast);
 }
 
-function parseScss(styles,sassConfig){
-	return parseCss(renderScss(styles,sassConfig));
+function parseScss(styles, sassConfig) {
+	return parseCss(renderScss(styles, sassConfig));
 }
-
 
 module.exports = {
 	parseScss,

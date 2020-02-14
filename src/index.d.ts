@@ -1,6 +1,6 @@
 import * as React from 'react';
 import fs from 'fs';
-import {Options} from 'sass';
+import Sass, {Options} from 'sass';
 
 type FunctionComponent<P> = React.FunctionComponent<
 	P & {
@@ -66,6 +66,7 @@ type SassConfig = Omit<Options, 'data'> & {
 		[key: string]: string;
 	} | null;
 	configContext?: ((ctx: Context) => void) | null;
+	getSassConfig?: ((instance: typeof Sass, scss: string, sassConfig: SassConfig) => SassConfig) | null;
 }
 
 export function pushRuleSets(ruleSets: RuleSets): void;
