@@ -138,7 +138,7 @@ function formatStyleSheet(stylesheet){
 	return result;
 }
 
-function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
+function renderScss(styles,{configContext,mockFileSystem,getSassConfig,...sassConfig} = {}){
 
 	const oldConfigContext = configContext;
 
@@ -169,7 +169,17 @@ function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
 		...sassConfig
 	};
 
-	return sass({configContext,mockFileSystem}).renderSync({...sassConfig,data: styles}).css.toString();
+	const instance = sass({configContext,mockFileSystem})
+	
+	if(typeof getSassConfig === 'function'){
+		sassConfig = {
+			...sassConfig,
+			...getSassConfig(instance,styles,{configContext,mockFileSystem,...sassConfig}),
+		}
+	}
+	
+	
+	return instance.renderSync({...sassConfig,data: styles}).css.toString();
 }
 
 function parseCss(css){
