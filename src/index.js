@@ -4,7 +4,7 @@ const ReactIs = require('react-is');
 
 const cssAdapter = require('./adapter');
 const CSSselect = require('css-select');
-const {parseCss,parseScss,renderScss} = require('./parser');
+const {parseCss,parseScss,renderScss, formatValue} = require('./parser');
 
 const styleFunctions = [];
 
@@ -105,9 +105,9 @@ function pushRuleSets(ruleSets){
 	onStyleUpdate();
 }
 
-function importScss(scss,sassConfig){
+function importScss(scss,sassConfig,theme){
 	pushRuleSets(
-		parseScss(scss,sassConfig)
+		parseScss(scss,sassConfig,theme)
 	);
 }
 

@@ -1,7 +1,7 @@
 const csstree = require('css-tree');
 const sass = require('./sass');
 
-function formatJsInSass(source){
+function formatJsInSass(source, theme){
 	let start = 0;
 	while (true) {
 		let startIndex = source.indexOf('js(', start);
@@ -29,7 +29,24 @@ function formatJsInSass(source){
 			offset++;
 		}
 		if (didFind) {
-			let section = 'js:' + source.substr(startIndex + 3, offset - 4 - startIndex);
+			let cutSource = source.substr(startIndex+3, offset - 4 - startIndex);
+			let section = '';
+			if (cutSource.indexOf('theme.') === 0) {
+				console.log(cutSource);
+				const keys = cutSource.split(".");
+				cutSource = theme;
+
+				for (i = 1; i < keys.length; i++) {
+					if (cutSource[keys[i]]) {
+						cutSource = cutSource[keys[i]];
+					} else {
+						throw new Error(`Invalid theme path ${keys.join('.')}`);
+					}
+				}
+				section = cutSource;
+			} else {
+				section = 'js:' + cutSource;
+			}
 			section = JSON.stringify(section).replace(/\\/g,'\\\\');
 			source =
 				source.slice(0, startIndex) + section + source.slice(offset);
@@ -138,7 +155,7 @@ function formatStyleSheet(stylesheet){
 	return result;
 }
 
-function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
+function renderScss(styles,{configContext,mockFileSystem,theme,...sassConfig} = {}){
 
 	const oldConfigContext = configContext;
 
@@ -149,7 +166,7 @@ function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
 		const oldReadFile = fs.readFileSync;
 		fs.readFileSync = function(pathToFile,options){
 			let result = oldReadFile.apply(this, [pathToFile, options]);
-			result = formatJsInSass(result.toString());
+			result = formatJsInSass(result.toString(),theme);
 
 			const encoding = options && typeof options === 'object' ? options.encoding : options;
 			if (encoding) {
@@ -160,7 +177,7 @@ function renderScss(styles,{configContext,mockFileSystem,...sassConfig} = {}){
 		}
 	};
 
-	styles = formatJsInSass(styles);
+	styles = formatJsInSass(styles,theme);
 
 	const mergedSassConfig = {
 		importer(){
@@ -190,5 +207,6 @@ function parseScss(styles,sassConfig){
 module.exports = {
 	parseScss,
 	parseCss,
-	renderScss
+	renderScss,
+	formatValue
 };
