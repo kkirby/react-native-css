@@ -107,12 +107,9 @@ function pushRuleSets(ruleSets) {
 			const query = CSSselect.compile(selector, { adapter: cssAdapter });
 			return styleInfo => {
 				if (query(styleInfo)) {
-					return styleAndProps;
+					return [styleAndProps,selector];
 				}
-				return {
-					style: {},
-					props: {}
-				};
+				return [false, false];
 			};
 		})
 	);
@@ -130,13 +127,21 @@ function importCss(css) {
 function getStyleAndPropsForStyleInfo(styleInfo) {
 	const result = {
 		style: {},
-		props: {}
+		props: {},
+		debugInfo: []
 	};
 
 	for (let styleFunction of styleFunctions) {
-		let styleAndProps = styleFunction(styleInfo);
-		Object.assign(result.style, styleAndProps.style);
-		Object.assign(result.props, styleAndProps.props);
+		let [styleAndProps,selector] = styleFunction(styleInfo);
+		if(styleAndProps !== false){
+			Object.assign(result.style, styleAndProps.style);
+			Object.assign(result.props, styleAndProps.props);
+			result.debugInfo.push({
+				selector: selector,
+				style: styleAndProps.style,
+				props: styleAndProps.props
+			});
+		}
 	}
 
 	return result;
@@ -167,7 +172,8 @@ function useStyle(name, selector, parent) {
 
 	const [styleAndProps, setStyleAndProps] = useState({
 		style: {},
-		props: {}
+		props: {},
+		debugInfo: []
 	});
 
 	const onUpdate = useCallback(() => {
@@ -181,7 +187,11 @@ function useStyle(name, selector, parent) {
 
 	return {
 		styleInfo,
-		styleAndProps
+		styleAndProps: {
+			props: styleAndProps.props,
+			style: styleAndProps.style
+		},
+		debugInfo: styleAndProps.debugInfo
 	};
 }
 
@@ -194,7 +204,7 @@ function decorateElementForStyles(
 	if (isFunctionalComponent(component)) {
 		let Result = (props, ref) => {
 			let { parentStyleInfo, ...restProps } = props;
-			let { styleInfo, styleAndProps } = useStyle(
+			let { styleInfo, styleAndProps, debugInfo } = useStyle(
 				name,
 				{
 					id: restProps.id,
@@ -202,6 +212,12 @@ function decorateElementForStyles(
 				},
 				parentStyleInfo
 			);
+			
+			if(typeof props.cssDebug === 'boolean' && props.cssDebug){
+				console.group('react-native-css: <' + name + '/>');
+				console.log(JSON.stringify(debugInfo,null,2));
+				console.groupEnd();
+			}
 
 			let style = {
 				...styleAndProps.style,

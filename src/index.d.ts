@@ -7,6 +7,7 @@ type FunctionComponent<P> = React.FunctionComponent<
 		id?: Null<string>;
 		className?: Null<string>;
 		parentStyleInfo?: StyleInfo;
+		cssDebug?: Null<boolean>;
 	}
 >;
 
