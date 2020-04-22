@@ -195,6 +195,22 @@ function useStyle(name, selector, parent) {
 	};
 }
 
+
+let augmentationStatus = false;
+
+const augmentations = [];
+
+function setAugmentationStatus(status){
+	augmentationStatus = status;
+}
+
+
+function addAugmentation(augmentation){
+	if(augmentationStatus){
+		augmentations.push(augmentation);
+	}
+}
+
 function decorateElementForStyles(
 	component,
 	processChildren = false,
@@ -227,7 +243,29 @@ function decorateElementForStyles(
 			if (styleAndProps.props.disableRender) {
 				return null;
 			}
-
+			let augmentationStorage;
+			let augmentationData;
+			if(augmentationStatus){
+				augmentationStorage = [];
+				augmentationData = {
+					name,
+					props,
+					parentStyleInfo,
+					styleInfo,
+					styleAndProps,
+					debugInfo,
+					style
+				};
+				augmentations.forEach((augmentation,i) => {
+					augmentationStorage[i] = {};
+					if(augmentation.before){
+						augmentation.before({
+							data: augmentationData,
+							storage: augmentationStorage[i]
+						});
+					}
+				});
+			}
 			let element = component(
 				{
 					...styleAndProps.props,
@@ -237,6 +275,17 @@ function decorateElementForStyles(
 				},
 				ref
 			);
+			if(augmentationStatus){
+				augmentations.forEach((augmentation,i) => {
+					if(augmentation.after){
+						augmentation.after({
+							data: augmentationData,
+							storage: augmentationStorage[i],
+							element
+						});
+					}
+				});
+			}
 
 			let nextProps = {
 				parentStyleInfo: styleInfo,
@@ -306,6 +355,8 @@ function resetStyles() {
 }
 
 module.exports = {
+	addAugmentation,
+	setAugmentationStatus,
 	decorateElementForStyles,
 	useStyle,
 	pushRuleSets,

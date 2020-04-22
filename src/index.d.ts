@@ -34,13 +34,21 @@ interface Selector {
 	className?: string | null;
 }
 
+interface Style {
+	[key: string]: string | number | {};
+}
+
+interface Props {
+	[key: string]: any;
+}
+
 interface StyleAndProps {
-	style: {
-		[key: string]: string | number;
-	};
-	props: {
-		[key: string]: any;
-	};
+	style: StyleAndProps;
+	props: Props;
+}
+
+interface DebugInfo extends StyleAndProps {
+	selector: Selector;
 }
 
 export function useStyle(
@@ -50,9 +58,44 @@ export function useStyle(
 ): {
 	styleInfo: StyleInfo;
 	styleAndProps: StyleAndProps;
+	debugInfo: DebugInfo;
 };
 
 export function resetStyles(): void;
+
+export function setAugmentationStatus(status: boolean): void;
+
+interface AugmentationData {
+	name: string;
+	props: Props;
+	parentStyleInfo: null | StyleInfo;
+	styleInfo: StyleInfo;
+	styleAndProps: StyleAndProps;
+	debugInfo: DebugInfo;
+	style: Style;
+}
+
+interface AugmentationBefore {
+	data: AugmentationData;
+	storage: {
+		[key: string]: any
+	};
+}
+
+interface AugmentationAfter {
+	data: AugmentationData;
+	storage: {
+		[key: string]: any
+	};
+	element: React.ReactNode;
+}
+
+interface Augmentation {
+	before?: ((data: AugmentationBefore) => void) | null;
+	after?: ((data: AugmentationAfter) => void) | null;
+}
+
+export function addAugmentation(augmentation: Augmentation): void;
 
 interface Context {
 	Buffer: typeof Buffer;
