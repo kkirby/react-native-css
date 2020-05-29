@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as RN from 'react-native';
 import fs from "fs";
 import Sass, { Options } from "sass";
 
@@ -13,13 +14,18 @@ type FunctionComponent<P> = React.FunctionComponent<
 
 export function styleComponent<P>(
 	component: React.ComponentType<P>,
-	processChildren?: boolean
+	processChildren?: boolean,
 ): FunctionComponent<Omit<P, "__StyleInfo__">>;
+
+export function styleContainer<T>(
+	component: T
+): T;
 
 export function decorateElementForStyles<P>(
 	component: React.ComponentType<P>,
 	processChildren?: boolean,
-	elementInheritsStyle?: boolean
+	elementInheritsStyle?: boolean,
+	alwaysContainer?: boolean
 ): FunctionComponent<Omit<P, "__StyleInfo__">>;
 
 export interface StyleInfo {
@@ -120,6 +126,16 @@ type SassConfig = Omit<Options, "data"> & {
 		  ) => SassConfig)
 		| null;
 };
+
+type InferProps<T> = T extends React.ComponentType<infer R> ? R : never;
+
+export function Container<T = typeof RN.View>(props?: {
+	parentStyleInfo: StyleInfo;
+	props: {[key: string]: any};
+} | {
+	component: T;
+	className?: string | null;
+} & React.PropsWithChildren<InferProps<T>> | null): React.ReactElement;
 
 export function pushRuleSets(ruleSets: RuleSets): void;
 

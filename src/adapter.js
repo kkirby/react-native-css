@@ -3,7 +3,7 @@ module.exports = {
 		return true;
 	},
 	existsOne(test,elems){
-		throw new Error('Unimplemented!');
+		return elems.some(test);
 	},
 	getAttributeValue(styleInfo,name){
 		if(name === 'class' || name === 'id'){
@@ -18,10 +18,18 @@ module.exports = {
 		return false;
 	},
 	getChildren(styleInfo){
-		if(styleInfo.length > 0){
-			return styleInfo[styleInfo.length - 1].children;
+		if(Array.isArray(styleInfo)){
+			if(styleInfo.length > 0){
+				styleInfo = styleInfo[styleInfo.length - 1];
+			}
+			else {
+				styleInfo = null;
+			}
 		}
-		return false;
+		if(styleInfo != null){
+			return styleInfo.childrenArray;
+		}
+		return [];
 	},
 	getName(styleInfo){
 		return styleInfo ? styleInfo.name.toLowerCase() : false;
@@ -30,7 +38,7 @@ module.exports = {
 		return styleInfo && styleInfo.parent ? styleInfo.parent : false;
 	},
 	getSiblings(styleInfo){
-		return styleInfo && styleInfo.parent ? styleInfo.parent.children : false;
+		return styleInfo && styleInfo.parent ? styleInfo.parent.childrenArray : false;
 	},
 	getText(node){
 		throw new Error('Unimplemented!');
@@ -42,10 +50,10 @@ module.exports = {
 		throw new Error('Unimplemented!');
 	},
 	findAll(test,nodes){
-		throw new Error('Unimplemented!');
+		return nodes.filter(test);
 	},
 	findOne(test,elems){
-		throw new Error('Unimplemented!');
+		return nodes.find(test);
 	},
 	equals(a,b){
 		return a === b;

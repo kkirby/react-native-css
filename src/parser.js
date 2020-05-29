@@ -10,6 +10,7 @@ function formatJsInSass(source, theme) {
 		}
 		let offset = startIndex + 3;
 		let closures = 1;
+		let didOpen = true;
 		let didFind = false;
 		while (true) {
 			if (offset > source.length) {
@@ -20,13 +21,13 @@ function formatJsInSass(source, theme) {
 				closures++;
 			} else if (c === ")") {
 				closures--;
-			} else if (c === ";") {
-				if (closures === 0) {
-					didFind = true;
-					break;
-				}
 			}
 			offset++;
+			if(closures === 0){
+				didFind = true;
+				break;
+			}
+			
 		}
 		if (didFind) {
 			let cutSource = source.substr(startIndex + 3, offset - 4 - startIndex);

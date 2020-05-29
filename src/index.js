@@ -1,4 +1,5 @@
 const React = require("react");
+const ReactNative = require("react-native");
 const {
 	useState,
 	useRef,
@@ -9,111 +10,50 @@ const {
 	forwardRef
 } = React;
 const ReactIs = require("react-is");
+const mobx = require('mobx');
 
 const cssAdapter = require("./adapter");
 const CSSselect = require("css-select");
 const { parseCss, parseScss, renderScss } = require("./parser");
+const {
+	useObservableCached,
+	useCleanup,
+	useObservableComputed,
+	useConvertObservableComputedToState,
+	isFunctionalComponent,
+	getComponentTag,
+	copyStaticProperties,
+	mergeStyles
+} = require('./lib');
+const Container = require('./Container');
+const augmentation = require('./augmentation');
+const _ = require('lodash');
 
-const styleFunctions = [];
-
-const styleListeners = new Set();
-
-let styleUpdateTimeout = null;
-
-function emitStyleUpdate() {
-	styleUpdateTimeout = null;
-	styleListeners.forEach(listener => listener());
-}
-function onStyleUpdate() {
-	if (styleUpdateTimeout != null) {
-		clearTimeout(styleUpdateTimeout);
-	}
-	styleUpdateTimeout = setTimeout(emitStyleUpdate, 1);
-}
-
-function addStyleListener(listener) {
-	styleListeners.add(listener);
-
-	return () => {
-		styleListeners.delete(listener);
-	};
-}
-
-// based on https://github.com/mridgway/hoist-non-react-statics/blob/master/src/index.js
-const hoistBlackList = {
-	$$typeof: true,
-	render: true,
-	compare: true,
-	type: true
-};
-
-function copyStaticProperties(base, target) {
-	Object.keys(base).forEach(key => {
-		if (base.hasOwnProperty(key) && !hoistBlackList[key]) {
-			Object.defineProperty(
-				target,
-				key,
-				Object.getOwnPropertyDescriptor(base, key)
-			);
-		}
-	});
-}
-
-function getComponentTag(component) {
-	if (component) {
-		if (typeof component === "string") {
-			return component.replace(/^RCT/, "");
-		} else {
-			return (
-				component.displayName ||
-				component.name ||
-				component.constructor.name ||
-				"Unknown"
-			);
-		}
-	} else {
-		return "Unknown";
-	}
-}
-
-function isFunctionalComponent(component) {
-	if (
-		typeof component === "function" &&
-		component instanceof Function &&
-		Object.getPrototypeOf(component) === Function.prototype
-	) {
-		return true;
-	} else {
-		return false;
-	}
-}
+const styleFunctions = mobx.observable(new Set());
 
 function pushRuleSets(ruleSets) {
-	styleFunctions.push(
-		...Object.entries(ruleSets).map(([selector, declarations]) => {
-			const styleAndProps = {
-				style: {},
-				props: {}
-			};
-			Object.entries(declarations).forEach(([key, value]) => {
-				// If the key starts with -- it's a prop.
-				if (key.substr(0, 2) === "--") {
-					styleAndProps.props[key.slice(2)] = value;
-				} else {
-					styleAndProps.style[key] = value;
-				}
-			});
+	Object.entries(ruleSets).map(([selector, declarations]) => {
+		const styleAndProps = {
+			style: {},
+			props: {}
+		};
+		Object.entries(declarations).forEach(([key, value]) => {
+			// If the key starts with -- it's a prop.
+			if (key.substr(0, 2) === "--") {
+				styleAndProps.props[key.slice(2)] = value;
+			} else {
+				styleAndProps.style[key] = value;
+			}
+		});
 
-			const query = CSSselect.compile(selector, { adapter: cssAdapter });
-			return styleInfo => {
-				if (query(styleInfo)) {
-					return [styleAndProps,selector];
-				}
-				return [false, false];
-			};
-		})
-	);
-	onStyleUpdate();
+		const query = CSSselect.compile(selector, { adapter: cssAdapter });
+		return styleInfo => {
+			if (query(styleInfo)) {
+				return [styleAndProps,selector];
+			}
+			return [false, false];
+		};
+	}).forEach(fn => styleFunctions.add(fn));
 }
 
 function importScss(scss, sassConfig, theme) {
@@ -148,77 +88,238 @@ function getStyleAndPropsForStyleInfo(styleInfo) {
 }
 
 function useStyle(name, selector, parent) {
-	const refValue = {
-		name,
-		selector,
-		parent,
-		children: [],
-		renderedStyle: null
-	};
-	const styleInfo = useMemo(
-		() => ({
-			name,
-			selector,
-			parent,
-			children: [],
-			renderedStyle: null
-		}),
-		[name, selector.id, selector.className, parent]
-	);
+	const styleInfo = useMemo(() => {
+		return mobx.observable({
+			name: null,
+			selector: mobx.observable({
+				id: null,
+				className: null
+			},{},{
+				deep: false
+			}),
+			parent: null,
+			children: mobx.observable.set(new Set(),{deep: false}),
+			get childrenArray(){
+				return [...this.children.values()];
+			},
+			renderedStyle: mobx.observable.map(new Map(),{deep: false}),
+			get renderedStyleObject(){
+				const parentStyle = this.parent != null ? this.parent.inheritableStyles : {};
+				return {
+					...parentStyle,
+					...(_.fromPairs([...this.renderedStyle.entries()]))
+				};
+			},
+			get inheritableStyles(){
+				return _.pick(
+					this.renderedStyleObject,
+					[
+						'textShadowOffset',
+						'color',
+						'fontSize',
+						'fontStyle',
+						'fontWeight',
+						'lineHeight',
+						'textAlign',
+						'textDecorationLine',
+						'textShadowColor',
+						'fontFamily',
+						'textShadowRadius',
+						'includeFontPadding',
+						'textAlignVertical',
+						'fontVariant',
+						'letterSpacing',
+						'textDecorationColor',
+						'textDecorationStyle',
+						'textTransform',
+						'writingDirection'
+					]
+				);
+			}
+		},{
+			renderedStyleObject: mobx.computed({
+				equals: mobx.comparer.structural,
+			}),
+			inheritableStyles: mobx.computed({
+				equals: mobx.comparer.structural
+			})
+		},{
+			deep: false
+		});
+	},[]);
 
-	if (parent != null && parent.children.indexOf(styleInfo) === -1) {
-		parent.children.push(styleInfo);
+	styleInfo.name = name;
+	styleInfo.selector.id = selector.id;
+	styleInfo.selector.className = selector.className;
+	styleInfo.parent = parent;
+
+	const styleAndProps = useMemo(() => {
+		return mobx.observable({
+			style: mobx.observable.map(new Map(),{deep: false}),
+			props: mobx.observable.map(new Map(),{deep: false}),
+			parent: null,
+			get styleObject(){
+				return _.fromPairs([...this.style.entries()]);
+			},
+			get propsObject(){
+				return _.fromPairs([...this.props.entries()]);
+			},
+			get styleWithInheirted(){
+				const parentStyle = this.parent != null ? this.parent.inheritableStyles : {};
+				return {
+					...parentStyle,
+					...this.styleObject
+				};
+			}
+			
+		},{
+			styleObject: mobx.computed({
+				equals: mobx.comparer.structural
+			}),
+			propsObject: mobx.computed({
+				equals: mobx.comparer.structural
+			}),
+			styleWithInheirted: mobx.computed({
+				equals: mobx.comparer.structural
+			})
+		},{
+			deep: false
+		});
+	},[]);
+	
+	styleAndProps.parent = parent;
+	
+	if(parent != null && typeof parent.children.has !== 'function'){
+		debugger;
 	}
-
-	const [styleAndProps, setStyleAndProps] = useState({
-		style: {},
-		props: {},
-		debugInfo: []
-	});
-
-	const onUpdate = useCallback(() => {
-		setStyleAndProps(getStyleAndPropsForStyleInfo(styleInfo));
+	if (parent != null && !parent.children.has(styleInfo)) {
+		parent.children.add(styleInfo);
+	}
+	
+	const fetchStylesAndProps = useCallback(() => {
+		return getStyleAndPropsForStyleInfo(styleInfo);
 	}, [styleInfo]);
+	
+	const onStylesAndPropsUpdated = useCallback((result) => {
+		styleInfo.renderedStyle.replace(result.style);
+
+		styleAndProps.style.replace(result.style);
+		styleAndProps.props.replace(result.props);
+	},[styleInfo,styleAndProps]);
 
 	useLayoutEffect(() => {
-		onUpdate();
-		return addStyleListener(onUpdate);
-	}, [onUpdate]);
+		return mobx.reaction(
+			fetchStylesAndProps,
+			onStylesAndPropsUpdated,
+			{
+				fireImmediately: true,
+				delay: 1
+			}
+		);
+	}, [fetchStylesAndProps,onStylesAndPropsUpdated]);
 
 	return {
-		styleInfo,
-		styleAndProps: {
-			props: styleAndProps.props,
-			style: styleAndProps.style
-		},
-		debugInfo: styleAndProps.debugInfo
+		styleInfo: styleInfo,
+		styleAndProps: styleAndProps
 	};
 }
 
+function processAlwaysContainer(name,component,props,ref){
+	const {parentStyleInfo,id,className,style,...restProps} = props;
+	
+	augmentation.start();
+	
+	let element = component(
+		props,
+		ref
+	);
+	
+	augmentation.end(element);
 
-let augmentationStatus = false;
-
-const augmentations = [];
-
-function setAugmentationStatus(status){
-	augmentationStatus = status;
-}
-
-
-function addAugmentation(augmentation){
-	if(augmentationStatus){
-		augmentations.push(augmentation);
+	if(element.type !== Container){
+		console.warn(`Element returned from ${name} is not a container!`,new Error().stack);
+		return false;
 	}
+	
+	const restPropsObservable = useObservableCached('restProps',restProps);
+	const restStyleObservable = useObservableCached('restStyle',style);
+	const elementPropsObservable = useObservableComputed('elementProps',() => {
+		return _.omit(element.props,'style');
+	},[element.props]);
+	const elementStyleObservable = useObservableCached('elementStyle',element.props.style);
+
+	const info = {
+		id: id != null ? id : (element.props.id != null ? element.props.id : ''),
+		className: [
+			className,
+			element.props.className != null ? element.props.className : ''
+		].join(' ').trim()
+	};
+
+	let { styleInfo, styleAndProps, debugInfo } = useStyle(
+		name,
+		info,
+		parentStyleInfo
+	);
+	
+	const mergedStyleObservable = useObservableComputed(
+		'processAlwaysContainer.mergedStyle',
+		() => {
+			return mergeStyles(
+				styleAndProps.styleWithInheirted,
+				elementStyleObservable.get(),
+				restStyleObservable.get(),
+			);
+		},
+		[styleAndProps,elementStyleObservable,restStyleObservable]
+	);
+	
+	const componentProps = useConvertObservableComputedToState(
+		useObservableComputed(
+			'processAlwaysContainer.props',
+			() => {
+				return {
+					parentStyleInfo: styleInfo,
+					props: {
+						style: mergedStyleObservable.get(),
+						...styleAndProps.propsObject,
+						...elementPropsObservable.get()
+					}
+				};
+			},
+			[styleAndProps,mergedStyleObservable,elementPropsObservable,restPropsObservable]
+		)
+	);
+
+	return React.cloneElement(
+		element,
+		componentProps,
+		props.children
+	);
 }
 
 function decorateElementForStyles(
 	component,
 	processChildren = false,
-	elementInheritsStyle = false
+	elementInheritsStyle = false,
+	alwaysContainer = false
 ) {
 	let name = getComponentTag(component);
 	if (isFunctionalComponent(component)) {
 		let Result = (props, ref) => {
+			const mobxNameArr = [name];
+			if(props.id != null){
+				mobxNameArr.push(props.id);
+			}
+			const mobxName = (() => (n) => mobxNameArr.join('_') + '_' + n)();
+				
+			if(alwaysContainer){
+				const res = processAlwaysContainer(name,component,props,ref);
+				if(res !== false){
+					return res;
+				}
+			}
+
 			let { parentStyleInfo, ...restProps } = props;
 			let { styleInfo, styleAndProps, debugInfo } = useStyle(
 				name,
@@ -229,73 +330,66 @@ function decorateElementForStyles(
 				parentStyleInfo
 			);
 			
-			if(typeof props.cssDebug === 'boolean' && props.cssDebug){
-				console.group('react-native-css: <' + name + '/>');
-				console.log(JSON.stringify(debugInfo,null,2));
-				console.groupEnd();
-			}
+			const restPropsObservable = useObservableCached('restProps',restProps);
+			const restStyle = useObservableCached('restStyle',restProps.style);
 
-			let style = {
-				...styleAndProps.style,
-				...restProps.style
-			};
-
-			if (styleAndProps.props.disableRender) {
-				return null;
-			}
-			let augmentationStorage;
-			let augmentationData;
-			if(augmentationStatus){
-				augmentationStorage = [];
-				augmentationData = {
-					name,
-					props,
-					parentStyleInfo,
-					styleInfo,
-					styleAndProps,
-					debugInfo,
-					style
-				};
-				augmentations.forEach((augmentation,i) => {
-					augmentationStorage[i] = {};
-					if(augmentation.before){
-						augmentation.before({
-							data: augmentationData,
-							storage: augmentationStorage[i]
-						});
-					}
-				});
-			}
-			let element = component(
-				{
-					...styleAndProps.props,
-					...restProps,
-					__StyleInfo__: styleInfo,
-					style
+			const mergedStyle = useObservableComputed(
+				mobxName('mergedStyle'),
+				() => {
+					return mergeStyles(
+						styleAndProps.styleWithInheirted,
+						restStyle.get()
+					);
 				},
+				[styleAndProps,restStyle]
+			);
+			
+			const componentProps = useConvertObservableComputedToState(
+				useObservableComputed(
+					mobxName('props'),
+					() => {
+						return {
+							...styleAndProps.propsObject,
+							...restPropsObservable.get(),
+							style: mergedStyle.get(),
+							__StyleInfo__: styleInfo
+						};
+					},
+					[styleAndProps,restPropsObservable,mergedStyle,styleInfo]
+				)
+			);
+			
+			augmentation.start();
+			
+			const element = component(
+				componentProps,
 				ref
 			);
-			if(augmentationStatus){
-				augmentations.forEach((augmentation,i) => {
-					if(augmentation.after){
-						augmentation.after({
-							data: augmentationData,
-							storage: augmentationStorage[i],
-							element
-						});
-					}
-				});
-			}
+			
+			augmentation.end(element);
 
-			let nextProps = {
-				parentStyleInfo: styleInfo,
-				...(elementInheritsStyle
-					? {
-							...styleAndProps.props,
-							style
-					  }
-					: {})
-			};
+			const inheritedProps = useConvertObservableComputedToState(
+				useObservableComputed(
+					mobxName('inheritedProps'),
+					() => {
+						return {
+							parentStyleInfo: styleInfo,
+							...(
+								elementInheritsStyle ? {
+									...styleAndProps.propsObject,
+									style: mergedStyle.get()
+								} : {}
+							)
+						};
+					},
+					[
+						styleInfo,
+						elementInheritsStyle,
+						styleAndProps,
+						mergedStyle
+					]
+				)
+			);
 
 			if (processChildren) {
 				let children = React.Children.map(element.props.children, child => {
@@ -308,12 +402,18 @@ function decorateElementForStyles(
 					}
 				});
 
-				return React.cloneElement(element, nextProps, children);
+				return React.cloneElement(element, inheritedProps, children);
 			} else {
-				return React.cloneElement(element, nextProps);
+				return React.cloneElement(element, inheritedProps);
 			}
+			
+			return result;
 		};
+		
+		copyStaticProperties(component,Result);
+		
 		Result.displayName = name + "Stylized";
+		
 		return Result;
 	} else {
 		if (ReactIs.isForwardRef(React.createElement(component))) {
@@ -339,7 +439,7 @@ function decorateElementForStyles(
 			const wrapperComponent = props => {
 				return React.createElement(component, props);
 			};
-			wrapperComponent.displayName = name;
+			copyStaticProperties(component,wrapperComponent);
 			return decorateElementForStyles(
 				wrapperComponent,
 				processChildren,
@@ -349,14 +449,16 @@ function decorateElementForStyles(
 	}
 }
 
+const styleContainer = (component) => {
+	return decorateElementForStyles(component,false,false,true);
+}
+
 function resetStyles() {
-	styleFunctions.splice(0, styleFunctions.length);
-	onStyleUpdate();
+	styleFunctions.clear();
 }
 
 module.exports = {
-	addAugmentation,
-	setAugmentationStatus,
+	Container,
 	decorateElementForStyles,
 	useStyle,
 	pushRuleSets,
@@ -364,9 +466,12 @@ module.exports = {
 	importCss,
 	renderScss,
 	resetStyles,
+	styleContainer,
 	// backwards compatability
 	updateStyles: pushRuleSets,
 	styleComponent(component, processChildren = false) {
 		return decorateElementForStyles(component, processChildren, true);
-	}
+	},
+	setAugmentationStatus: augmentation.setAugmentationStatus.bind(augmentation),
+	addAugmentation: augmentation.addAugmentation.bind(augmentation)
 };

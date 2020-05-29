@@ -1,11 +1,11 @@
 {
   "name": "@gmrmarketing/react-native-css",
-  "version": "1.1.18",
+  "version": "2.0.0",
   "description": "CSS in react-native!",
   "main": "src/index.js",
   "scripts": {
     "install": "node ./post-install/process-sass.js",
-    "compile": "browserify ./src/index.js -s reactNativeCss --exclude chokidar --exclude react -o ./index.js"
+    "test": "jest"
   },
   "author": "Digital",
   "license": "UNLICENSED",
@@ -16,13 +16,22 @@
     "css-select": "^2.0.2",
     "css-tree": "^1.0.0-alpha.34",
     "escape-string-regexp": "^2.0.0",
+    "lodash": "^4.17.15",
     "memfs": "^3.0.4",
     "react-is": "^16.12.0",
-    "sass": "^1.22.12",
+    "sass": "^1.26.5",
     "through": "^2.3.8"
   },
   "peerDependencies": {
     "react": "*",
     "react-native": "*"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.9.6",
+    "@babel/preset-react": "^7.9.4",
+    "babel-jest": "^26.0.1",
+    "jest": "^26.0.1",
+    "react": "^16.13.1",
+    "react-test-renderer": "^16.13.1"
   }
 }
